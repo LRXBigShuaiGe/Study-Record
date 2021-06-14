@@ -963,6 +963,8 @@ Spring为我们提供了事务管理器（即切面类）为目标方法运行�
            <context:property-placeholder location="classpath:dbconfig.properties"></context:property-placeholder>
        <context:component-scan base-package="com.xin.*"/>
        <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+           <!-- 以下数据源配置${}引用了properties配置文件的信息，
+   		可以自行配置用户名user、密码password、数据库url、驱动类全类名driverClass-->
            <property name="user" value="${jdbc.user}"></property>
            <property name="password" value="${jdbc.password}"></property>
            <property name="jdbcUrl" value="${jdbc.jdbcUrl}"></property>
@@ -1002,4 +1004,115 @@ Spring为我们提供了事务管理器（即切面类）为目标方法运行�
 
 3. 然后，就可以在方法上使用@Transcational注解了
 
- 
+---
+
+### 事务的细节（一些注解配置）
+
+在注解@Transactional中可以配置一些属性
+
+#### 超时timeout
+
+超时属性timeout，int型，以秒为单位；
+
+事务超出指定时常后自动终止并且回滚
+
+---
+
+#### readOnly
+
+如果若干个sql都是查询操作，可以设置`readOnly=true`,可以加快查询速度，不需要考虑事务的操作；
+
+但是如果sql里面有其他操作，readOnly为true的话，则会抛出异常；
+
+---
+
+#### noRollbackFor
+
+运行时异常默认都回滚，但编译时异常默认不回滚
+
+noRollbackFor 指定哪些异常不回滚，可以使一些运行时异常不回滚；
+
+使用方式为如下：
+
+```java
+    @Transactional(timeout = 3,noRollbackFor = {ArrayIndexOutOfBoundsException.class, FileNotFoundException.class})
+```
+
+指定发生那些异常，用异常类名数组表示；
+
+---
+
+#### noRollbakcForClassName
+
+与noRollbackFor使用类似，不过指定的是一个字符串数组，每个字符串是异常类的全类名，使用比较麻烦，所以通常不使用；
+
+---
+
+#### rollbackFor
+
+可以指定原本不回滚的异常回滚（编译时异常）
+
+使用方式参考noRollbackFor
+
+---
+
+#### isolation事务隔离级别
+
+1. 读未提交
+
+   READ UNCOMITTED
+
+2. 读已提交
+
+   READ COMMITTED
+
+3. 可重复读
+
+   REPEATABLE READ
+
+4. 串行化
+
+   SERIALIZABLE
+
+---
+
+### 事务的传播行为propagation
+
+事务传播行为：当一个事务方法被另一个事务方法调用时，事务之间应如何执行。
+
+例：事务方法A在方法中调用事务方法B时，B可以在A的事务中运行，即当A出错时B中的操作也回滚；B也可以自己另外开启一个事务自己独立运行，即在执行完B之后，如果A出错，A回滚，但B已经执行的操作不会回滚。
+
+由此可以设置事务的传播行为：
+
+1. **REQUIRED**（重点）
+
+   表示当前方法必须运行在事务中，如果当前已有事务存在，则就在此事务中运行（实现方式就是与当前事务共用同一个Connection对象），否则，就开启一个新的事务（自己建立一个Connection对象）。
+
+2. **REQURED_NEW**（重点）
+
+   表示当前方法必须运行在自己建立的事务当中，如果当前已经有事务存在，则将当前事务挂起，自己另建一个事务，当自己的事务运行完毕后，再继续当前事务。
+
+   ![image-20210609214819514](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20210609214819514.png)
+
+3. SUPPORTS
+
+   如果有事务在运行，则方法就在这个事务中运行，如果没有，就可以不在事务中运行。
+
+4. NOT_SUPPORTED
+
+   当前方法不应该在事务中运行，如果有运行的事务，则将事务挂起。
+
+5. MANDATORY
+
+   当前方法必须在事务中运行，如果没有正在运行的事务，则抛出异常。
+
+6. NEVER
+
+   当前方法不应该在事务中运行，如果有运行的事务，则抛出异常
+
+7. NESTED
+
+   如果有事务在运行，当前方法就应该在这个事务的嵌套事务中运行，否则，就启动一个新的事务，并在它自己的事务内运行。
+
+*注意*：**REQUIRED**属性设置之后，其他的属性（如timeout）设置都失效，这些都由大事务，即上层的事务决定。
+
