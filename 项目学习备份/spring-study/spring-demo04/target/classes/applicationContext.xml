@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context  http://www.springframework.org/schema/context/spring-context.xsd
+                           http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+        <context:property-placeholder location="classpath:dbconfig.properties"></context:property-placeholder>
+        <bean id="myMathCalculator" class="com.xin.impl.MyMathCalculator"/>
+        <bean id="logUtil" class="com.xin.util.LogUtil"/>
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="user" value="${jdbc.user}"></property>
+        <property name="password" value="${jdbc.password}"></property>
+        <property name="jdbcUrl" value="${jdbc.jdbcUrl}"></property>
+        <property name="driverClass" value="${jdbc.driverClass}"></property>
+    </bean>
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+        <constructor-arg name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <aop:config>
+        <aop:pointcut id="myPointcut" expression="execution(public int com.xin.impl.MyMathCalculator.*(int ,int ))"/>
+        <aop:aspect id="logUtil" ref="logUtil" order="1">
+            <aop:before method="logStart" pointcut="execution(public int com.xin.impl.MyMathCalculator.*(int ,int ))"/>
+            <aop:after method="logFinish" pointcut-ref="myPointcut"/>
+            <aop:after-returning method="logReturn" pointcut-ref="myPointcut" returning="result"/>
+            <aop:after-throwing method="logExpection" throwing="e" pointcut-ref="myPointcut"/>
+        </aop:aspect>
+    </aop:config>
+
+</beans>
